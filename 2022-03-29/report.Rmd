@@ -1,0 +1,84 @@
+---
+title: "Tidy Tuesday "
+output: 
+  html_document:
+    toc: true
+    code_folding: hide
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+
+library(tidyverse)
+sports <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-29/sports.csv')
+
+```
+
+
+# Introduction + Question
+
+
+Q: do gender disparities in expenditure per participant differ by sport. Particular examine this disparity int he context of gender participation ratios by sport. 
+
+* for now do longitudinal and maybe consider school characterization (d1 vs d3...)
+
+# Data
+
+1. claculat expenditure per paritipant by gender
+2. calculate gender participation (pct of particiaptns that are women)
+
+```{r}
+## Subset to columns we are intersted
+df1 = sports %>% 
+  select(id = unitid,classification_name,year,
+         sport = sports,
+         partic_men, partic_women,
+         exp_men, exp_women)
+
+## Filter for 2019 and coed sports
+df2 = df1 %>%
+  filter(year == max(year), ##for most recent year
+         !is.na(partic_men)&!is.na(partic_women) ## coed sports
+         ) %>% 
+  select(-year)
+ 
+
+## Claculate metrics
+df3 = df2 %>% 
+  mutate(
+    exp_per_partic_men = exp_men/partic_men,
+    exp_per_partic_women = exp_women/partic_women,
+    pct_partic_women = partic_women/(partic_women + partic_men)
+  ) 
+
+## Analytics dataset
+dfa = df3 %>% 
+  select(id, sport,
+         exp_per_partic_men,
+         exp_per_partic_women,
+         pct_partic_women
+         )
+```
+
+
+
+# Visualization
+
+Lets first make mini one dimensional plots. 
+
+
+
+```{r}
+
+dfa %>% 
+  ggplot(aes(x = pct_partic_women, y = sport))+
+  geom_violin()
+```
+

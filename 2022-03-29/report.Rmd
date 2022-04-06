@@ -17,6 +17,8 @@ knitr::opts_chunk$set(
 )
 
 library(tidyverse)
+library(plotly)
+library(ggrepel)
 sports <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-29/sports.csv')
 
 ```
@@ -33,6 +35,8 @@ Q: do gender disparities in expenditure per participant differ by sport. Particu
 
 1. claculat expenditure per paritipant by gender
 2. calculate gender participation (pct of particiaptns that are women)
+
+we capture disparity in expenditure as a ratio: (expenditure per male participant)/(expenditure per female participant). A value of 1 is parity. A value greater thatn 1 indicates men have high expenditure per participant. A value less than 1 indicates female have higher.
 
 ```{r}
 ## Subset to columns we are intersted
@@ -55,30 +59,75 @@ df3 = df2 %>%
   mutate(
     exp_per_partic_men = exp_men/partic_men,
     exp_per_partic_women = exp_women/partic_women,
-    pct_partic_women = partic_women/(partic_women + partic_men)
+    ratio_exp_per_partic = exp_per_partic_men/exp_per_partic_women,
+    pct_partic_women = partic_women/(partic_women + partic_men)*100
   ) 
 
 ## Analytics dataset
-dfa = df3 %>% 
+df_school = df3 %>% 
   select(id, sport,
-         exp_per_partic_men,
-         exp_per_partic_women,
+         ratio_exp_per_partic,
          pct_partic_women
          )
+
+df_sport = df3 %>% 
+  group_by(sport) %>% 
+  summarize_at(vars(c(exp_per_partic_men,exp_per_partic_women,
+                      ratio_exp_per_partic,pct_partic_women
+                      )),~mean(.x)) %>% 
+  ungroup()
 ```
 
 
 
 # Visualization
 
-Lets first make mini one dimensional plots. 
-
-
+Lets first make mini plots. First relationship between disparitiy in expenditure per particupant and pct of women participating. 
 
 ```{r}
 
-dfa %>% 
-  ggplot(aes(x = pct_partic_women, y = sport))+
-  geom_violin()
+df_sport %>% 
+  ggplot(aes(y = ratio_exp_per_partic,
+            x = pct_partic_women,
+            label = sport))+
+  geom_point()+
+  geom_text_repel()+
+  geom_hline(yintercept = 0.7, lty=2)+
+  geom_hline(yintercept = 1.3, lty = 2)+
+  geom_hline(yintercept = 1)+
+  scale_y_continuous(limits = c(0,1.5))+
+  scale_x_continuous(limits = c(0,100))+
+  labs(
+    x = "% of participants that are women",
+    y = "Expenditure disparity by gender",
+    subtitle = "Disparity between expenditure per participant by gender",
+    title = "% female participants vs expenditure disparity"
+  )+
+  theme_classic()
+
+```
+
+Lets look at differences
+
+```{r}
+df_sport %>% 
+  mutate(diff = exp_per_partic_men - exp_per_partic_women) %>% 
+  ggplot(aes(y = ratio_exp_per_partic,
+            x = pct_partic_women,
+            label = sport))+
+  geom_point()+
+  geom_text_repel()+
+  geom_hline(yintercept = 0.7, lty=2)+
+  geom_hline(yintercept = 1.3, lty = 2)+
+  geom_hline(yintercept = 1)+
+  scale_y_continuous(limits = c(0,1.5))+
+  scale_x_continuous(limits = c(0,100))+
+  labs(
+    x = "% of participants that are women",
+    y = "Expenditure disparity by gender",
+    subtitle = "Disparity between expenditure per participant by gender",
+    title = "% female participants vs expenditure disparity"
+  )+
+  theme_classic()
 ```
 
